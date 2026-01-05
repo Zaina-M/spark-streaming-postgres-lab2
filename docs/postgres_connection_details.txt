@@ -1,0 +1,48 @@
+# PostgreSQL Connection Details
+
+## External Connection (from host machine)
+- Host: localhost
+- Port: 5432
+- Database: ecommerce
+- User: spark
+- Password: spark123
+- JDBC URL: jdbc:postgresql://localhost:5432/ecommerce
+
+## Internal Connection (from Docker containers)
+- Host: ecommerce_postgres
+- Port: 5432
+- Database: ecommerce
+- User: spark
+- Password: spark123
+- JDBC URL: jdbc:postgresql://ecommerce_postgres:5432/ecommerce
+
+## Connection Examples
+
+### Command Line
+psql -h localhost -p 5432 -U spark -d ecommerce
+
+### Python (psycopg2)
+import psycopg2
+conn = psycopg2.connect(
+    host="localhost",
+    port=5432,
+    database="ecommerce",
+    user="spark",
+    password="spark123"
+)
+
+### Java/Spark JDBC
+Properties props = new Properties();
+props.setProperty("user", "spark");
+props.setProperty("password", "spark123");
+props.setProperty("driver", "org.postgresql.Driver");
+
+Connection conn = DriverManager.getConnection(
+    "jdbc:postgresql://localhost:5432/ecommerce", props
+);
+
+## Security Notes
+- This is a development setup with default credentials
+- Change passwords for production use
+- Use environment variables for sensitive data
+- Consider SSL/TLS for secure connections

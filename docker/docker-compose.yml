@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: ecommerce_postgres
+    environment:
+      POSTGRES_DB: ecommerce
+      POSTGRES_USER: spark
+      POSTGRES_PASSWORD: spark123
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/postgres_setup.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce_net
+
+  spark:
+    image: apache/spark:3.5.7-python3
+    container_name: spark_master
+    depends_on:
+      - postgres
+    user: root
+    working_dir: /opt/spark/work-dir
+    volumes:
+      - ../data:/data
+      - ../spark:/opt/spark/work-dir/scripts
+    command: >
+      /opt/spark/bin/spark-submit
+      --master local[*]
+      --packages org.postgresql:postgresql:42.7.1
+      scripts/spark_streaming_to_postgres.py
+    networks:
+      - ecommerce_net
+
+volumes:
+  postgres_data:
+
+networks:
+  ecommerce_net:
+    driver: bridge
