@@ -60,6 +60,11 @@ Data Generator → CSV Files → Spark Streaming → PostgreSQL
    - Check data: `docker compose exec postgres psql -U spark -d ecommerce -c "SELECT COUNT(*) FROM ecommerce_events;"`
    - View logs: `docker compose logs spark`
 
+6. **Shut down services**
+```bash
+docker compose down
+```
+
 ## Data Flow
 
 1. **Data Generation**: Python script creates CSV files every 5 seconds (100 events each)
