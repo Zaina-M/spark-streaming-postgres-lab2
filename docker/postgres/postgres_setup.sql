@@ -1,4 +1,4 @@
-CREATE TABLE ecommerce_events (
+CREATE TABLE IF NOT EXISTS ecommerce_events (
     event_id VARCHAR(36) PRIMARY KEY,
     user_id INT NOT NULL,
     event_type VARCHAR(20) NOT NULL CHECK (event_type IN ('view', 'purchase')),

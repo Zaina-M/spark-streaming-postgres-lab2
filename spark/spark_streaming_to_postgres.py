@@ -9,9 +9,9 @@ from pyspark.sql.types import (
 )
 from pyspark.sql.functions import col, to_timestamp
 
-# --------------------------------------------------
+
 # Load environment variables
-# --------------------------------------------------
+
 load_dotenv()
 
 POSTGRES_HOST = os.getenv("POSTGRES_HOST")
@@ -25,20 +25,20 @@ CHECKPOINT_PATH = os.getenv("CHECKPOINT_PATH", "/data/checkpoints/ecommerce")
 
 JDBC_URL = f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
-# --------------------------------------------------
+
 # Spark Session
-# --------------------------------------------------
+
 spark = (
     SparkSession.builder
     .appName("EcommerceStreamingToPostgres")
     .getOrCreate()
 )
-
+# Set log level to WARN to reduce verbosity because spark is very chatty
 spark.sparkContext.setLogLevel("WARN")
 
-# --------------------------------------------------
-# Explicit schema (NO inferSchema)
-# --------------------------------------------------
+
+# Explicit schema (to avoid schema inference on streaming data)
+
 schema = StructType([
     StructField("event_id", StringType(), False),
     StructField("user_id", IntegerType(), True),
@@ -48,9 +48,9 @@ schema = StructType([
     StructField("event_time", StringType(), True),
 ])
 
-# --------------------------------------------------
+
 # Read streaming CSV files
-# --------------------------------------------------
+
 raw_df = (
     spark.readStream
     .schema(schema)
@@ -59,19 +59,20 @@ raw_df = (
     .csv(INPUT_PATH)
 )
 
-# --------------------------------------------------
+
 # Transformations
-# --------------------------------------------------
+
 clean_df = (
     raw_df
     .filter(col("event_type").isin("view", "purchase"))
     .withColumn("event_time", to_timestamp(col("event_time")))
+    .withWatermark("event_time", "5 minutes")
     .dropDuplicates(["event_id"])   # logical deduplication
 )
 
-# --------------------------------------------------
-# JDBC properties (NO hardcoding)
-# --------------------------------------------------
+
+# JDBC properties 
+
 jdbc_properties = {
     "user": POSTGRES_USER,
     "password": POSTGRES_PASSWORD,
@@ -100,9 +101,8 @@ def write_to_postgres(batch_df, batch_id):
         )
     )
 
-# --------------------------------------------------
 # Start streaming query
-# --------------------------------------------------
+
 query = (
     clean_df.writeStream
     .foreachBatch(write_to_postgres)

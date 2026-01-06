@@ -3,9 +3,9 @@ services:
     image: postgres:15
     container_name: ecommerce_postgres
     environment:
-      POSTGRES_DB: ecommerce
-      POSTGRES_USER: spark
-      POSTGRES_PASSWORD: spark123
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -24,11 +24,12 @@ services:
     volumes:
       - ../data:/data
       - ../spark:/opt/spark/work-dir/scripts
+      - ../.env:/opt/spark/work-dir/.env
     command: >
-      /opt/spark/bin/spark-submit
+      sh -c "pip install python-dotenv && /opt/spark/bin/spark-submit
       --master local[*]
       --packages org.postgresql:postgresql:42.7.1
-      scripts/spark_streaming_to_postgres.py
+      scripts/spark_streaming_to_postgres.py"
     networks:
       - ecommerce_net
 

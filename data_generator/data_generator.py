@@ -6,9 +6,8 @@ from datetime import datetime
 
 import pandas as pd
 
-# -----------------------
+
 # Configuration
-# -----------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "..", "data", "input")
@@ -19,9 +18,8 @@ SLEEP_SECONDS = 5
 
 EVENT_TYPES = ["view", "purchase"]
 
-# -----------------------
+
 # Event Generator
-# -----------------------
 
 def generate_event():
     event_type = random.choice(EVENT_TYPES)
@@ -35,9 +33,8 @@ def generate_event():
         "event_time": datetime.utcnow().isoformat()
     }
 
-# -----------------------
+
 # Main Loop
-# -----------------------
 
 def main():
     print("Starting e-commerce event generator...")
