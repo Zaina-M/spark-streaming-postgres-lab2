@@ -17,7 +17,7 @@ Docker is used so that:
 
 ---
 
-## 2. Docker & Docker Compose (Mental Model)
+## 2. Docker & Docker Compose 
 
 ### Docker Image
 

@@ -6,7 +6,6 @@ This report analyzes the performance of the ecommerce streaming pipeline under v
 
 ## Test Environment
 
-- **Hardware**: Windows 11, Intel Core i7, 16GB RAM, SSD storage
 - **Software**:
   - Docker Desktop 4.25.0
   - Apache Spark 3.5.7 (Python)

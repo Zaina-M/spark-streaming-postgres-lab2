@@ -1,5 +1,13 @@
 .env
-data/input
-venv
-data/checkpoints
+venv/
 __pycache__/
+.idea/
+.pytest_cache/
+
+# Data Pipeline Dirs
+data/input/
+data/checkpoints/
+data/logs/
+data/offsets/
+data/state/
+docs/detailed_explanation.md

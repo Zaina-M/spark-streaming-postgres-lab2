@@ -1,13 +1,54 @@
-# User Guide: Ecommerce Streaming Pipeline
+# User Guide: E-Commerce Streaming Pipeline
 
-This guide provides step-by-step instructions to set up and run the ecommerce streaming pipeline on my local machine.
+This comprehensive guide provides step-by-step instructions to set up, run, and monitor the e-commerce streaming pipeline.
+
+---
+
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Project Structure](#project-structure)
+3. [Configuration](#configuration)
+4. [Step-by-Step Setup](#step-by-step-setup)
+5. [Monitoring the Pipeline](#monitoring-the-pipeline)
+6. [Running Tests](#running-tests)
+7. [Troubleshooting](#troubleshooting)
+8. [Advanced Usage](#advanced-usage)
+
+---
 
 ## Prerequisites
 
-- **Docker Desktop**: Ensure Docker is installed and running. The pipeline uses Docker Compose to manage containers.
-- **Python 3.x**: Required for the data generator script.
-- **Git**: To clone the repository (if not already done).
-- **Windows PowerShell or Command Prompt**: For running commands.
+### Required Software
+
+| Software | Version | Purpose |
+|----------|---------|---------|
+| Docker Desktop | 4.0+ | Container orchestration |
+| Python | 3.10+ | Data generator and tests |
+| Git | 2.0+ | Version control |
+
+### System Requirements
+
+- **RAM**: 4GB+ allocated to Docker
+- **Disk**: 2GB+ free space
+- **Ports**: 5433 (PostgreSQL) must be available
+
+### Verify Installation
+
+```powershell
+# Check Docker
+docker --version
+docker compose version
+
+# Check Python
+python --version
+pip --version
+
+# Check Git
+git --version
+```
+
+---
 
 ## Project Structure
 
@@ -15,168 +56,458 @@ Before starting, ensure your project directory looks like this:
 
 ```
 ecommerce-streaming-pipeline/
+├── config/                         #  Configuration management
+│   ├── __init__.py
+│   └── settings.py                 # Centralized settings
 ├── data/
-│   ├── checkpoints/
-│   └── input/
+│   ├── checkpoints/                # Spark fault tolerance
+│   ├── input/                      # Generated CSV files
+│   └── logs/                       #  Application log files
+│       ├── data_generator_YYYYMMDD.log
+│       └── spark_streaming_YYYYMMDD.log
 ├── data_generator/
-│   ├── data_generator.py
-│   └── requirements.txt
+│   ├── data_generator.py           # Event generator
+│   └── requirements.txt            # Python dependencies
 ├── docker/
-│   ├── docker-compose.yml
+│   ├── docker-compose.yml          # Service orchestration
+│   ├── .env                        # Environment variables
 │   └── postgres/
-│       └── postgres_setup.sql
-├── docs/
-│   ├── project_overview.md
-│   └── user_guide.md
-└── spark/
-    └── spark_streaming_to_postgres.py
+│       └── postgres_setup.sql      # Database schema
+├── spark/
+│   ├── spark_streaming_to_postgres.py  # Main streaming job
+│   ├── schema/                     # Schema registry
+│   │   └── registry.py
+│   ├── utils/                      # Utilities
+│   │   └── retry.py                # Retry & circuit breaker
+│   └── monitoring/                 # Observability
+│       └── metrics.py              # Metrics & log-based alerts
+├── tests/                          #  124+ unit tests
+│   ├── test_data_generator.py
+│   ├── test_transformations.py
+│   ├── test_config.py
+│   ├── test_retry.py
+│   └── test_monitoring.py
+└── docs/
+    ├── project_overview.md
+    ├── user_guide.md               # This file
+    ├── detailed_explanation.md     # Beginner-friendly explanation
+    └── test_cases.md
 ```
 
-## Step-by-Step Setup and Execution
+---
 
-### Step 1: Navigate to the Project Directory
+## Configuration
 
-Open a terminal (PowerShell or Command Prompt) and navigate to the project root:
+### Environment Variables
 
+Create a `.env` file in the project root to customize settings:
 
+```env
+# Database Configuration
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5433
+POSTGRES_DB=ecommerce
+POSTGRES_USER=spark
+POSTGRES_PASSWORD=spark123
 
-### Step 2: Start PostgreSQL Database
+# Data Generator Settings
+BATCH_SIZE=100
+INTERVAL_SECONDS=5.0
+ANOMALY_RATE=0.02
 
-The pipeline uses PostgreSQL to store processed ecommerce events. Start it using Docker Compose:
+# Streaming Settings
+TRIGGER_INTERVAL=10 seconds
+WATERMARK_DELAY=10 minutes
 
+# Data Quality
+MIN_VALIDITY_RATE=95.0
+MAX_PRICE=10000.0
+
+# Retry Settings
+MAX_RETRIES=3
+INITIAL_RETRY_DELAY=1.0
+CIRCUIT_BREAKER_THRESHOLD=5
+
+# Monitoring
+LOG_LEVEL=INFO
 ```
+
+### Default Configuration
+
+If no `.env` file exists, sensible defaults are used. See `config/settings.py` for all options.
+
+---
+
+## Step-by-Step Setup
+
+### Step 1: Clone and Navigate
+
+```powershell
+# Clone the repository (if needed)
+git clone https://github.com/Zaina-M/ecommerce-streaming-pipeline.git
+
+# Navigate to project
+cd ecommerce-streaming-pipeline
+```
+
+### Step 2: Install Python Dependencies
+
+```powershell
+cd data_generator
+pip install -r requirements.txt
+cd ..
+```
+
+### Step 3: Start PostgreSQL Database
+
+```powershell
 cd docker
 docker compose up -d postgres
 ```
 
-- This command starts the PostgreSQL container in detached mode.
-- It initializes the `ecommerce` database with the `ecommerce_events` table.
-- Wait a few seconds for the database to fully initialize.
+**What happens**:
+- Starts PostgreSQL 15 container on port 5433
+- Creates `ecommerce` database
+- Creates tables: `ecommerce_events`, `dead_letter_events`, `data_quality_metrics`
+- Creates analytics views
 
-**Verify**: Check if the container is running:
+**Verify**:
 
-```
+```powershell
+# Check container is running
 docker compose ps
-```
 
-You should see `ecommerce_postgres` with status "Up".
+# Should show: ecommerce_postgres ... Up
 
-### Step 3: Run the Data Generator
+# Test database connection
+docker exec ecommerce_postgres pg_isready -U spark
 
-The data generator creates synthetic CSV files with ecommerce events. Run it in a separate terminal:
+# Should show: accepting connections
 
-```
-cd data_generator
-python data_generator.py
-```
-
-- This script generates 100 events per CSV file every 5 seconds.
-- Files are saved in `../data/input/` with timestamps (e.g., `events_20260105_144552.csv`).
-- Keep this terminal open; the script runs continuously.
-- Note: You may see deprecation warnings for `datetime.utcnow()` – these don't affect functionality.
-
-**Verify**: After a few seconds, check for new files in `data/input/`:
-
-```
-dir ..\data\input
+# List tables
+docker exec ecommerce_postgres psql -U spark -d ecommerce -c "\dt"
 ```
 
 ### Step 4: Start Apache Spark Streaming
 
-Now start the Spark service to process the streaming data:
-
-```
-cd docker
+```powershell
 docker compose up -d spark
 ```
 
-- This starts the Spark container, which runs the streaming job.
-- The job reads CSV files from `data/input/`, processes them, and writes to PostgreSQL.
-- Processing triggers every 10 seconds for continuous streaming.
+**What happens**:
+- Starts Spark 3.5.7 container
+- Mounts `data/input/` directory for file monitoring
+- Runs streaming job with 10-second trigger intervals
+- Connects to PostgreSQL for data storage
 
-**Verify**: Check container status:
+**Verify**:
 
-```
+```powershell
+# Check containers
 docker compose ps
+
+# Should show: ecommerce_postgres ... Up
+#              spark_master ... Up
+
+# View Spark logs
+docker logs spark_master --tail 20
 ```
 
-Both `ecommerce_postgres` and `spark_master` should be "Up".
+### Step 5: Run Data Generator
 
-### Step 5: Monitor the Pipeline
+Open a **new terminal window**:
 
-#### Check Data Ingestion
-Query the PostgreSQL database to see ingested events:
-
-```
-docker compose exec postgres psql -U spark -d ecommerce -c "SELECT COUNT(*) FROM ecommerce_events;"
+```powershell
+cd ecommerce-streaming-pipeline/data_generator
+python data_generator.py
 ```
 
-- Initially, it may show 0 or a small number.
-- As the pipeline runs, the count should increase (e.g., +100 every ~10-15 seconds).
-
-#### View Sample Data
-See the actual events:
+**Expected output**:
 
 ```
-docker compose exec postgres psql -U spark -d ecommerce -c "SELECT * FROM ecommerce_events LIMIT 5;"
+
+2026-01-29 10:30:00 | INFO     |  E-COMMERCE EVENT GENERATOR STARTED
+2026-01-29 10:30:00 | INFO     |  Output directory: data/input
+2026-01-29 10:30:00 | INFO     |  Log file: data/logs/data_generator_20260129.log
+2026-01-29 10:30:05 | INFO     |  [Batch 1] SUCCESS
+2026-01-29 10:30:05 | INFO     |    File: events_20260129_103005_abc123.csv
+2026-01-29 10:30:05 | INFO     |     Events: 100
 ```
 
-#### Monitor Spark Logs
-Check for processing activity:
+**Note**: Keep this terminal open. The generator runs continuously. All logs are also saved to `data/logs/data_generator_YYYYMMDD.log`.
 
-```
-docker compose logs spark
+---
+
+## Monitoring the Pipeline
+
+### Check Event Counts
+
+```powershell
+# Total events processed
+docker exec ecommerce_postgres psql -U spark -d ecommerce -c "
+SELECT 
+    (SELECT COUNT(*) FROM ecommerce_events) as valid_events,
+    (SELECT COUNT(*) FROM dead_letter_events) as invalid_events;
+"
 ```
 
-- Look for messages like "Writing batch X with Y rows" indicating successful processing.
-- Errors (if any) will appear here.
+### View Event Distribution
 
-#### Monitor Data Files
-Watch new CSV files being created:
+```powershell
+docker exec ecommerce_postgres psql -U spark -d ecommerce -c "
+SELECT event_type, COUNT(*) as count,
+       ROUND(SUM(total_amount)::numeric, 2) as revenue
+FROM ecommerce_events 
+GROUP BY event_type 
+ORDER BY count DESC;
+"
+```
 
+### Check Data Quality
+
+```powershell
+docker exec ecommerce_postgres psql -U spark -d ecommerce -c "
+SELECT * FROM v_data_quality_summary;
+"
 ```
-dir data\input
+
+### View Category Performance
+
+```powershell
+docker exec ecommerce_postgres psql -U spark -d ecommerce -c "
+SELECT * FROM v_category_performance;
+"
 ```
+
+### View Invalid Events
+
+```powershell
+docker exec ecommerce_postgres psql -U spark -d ecommerce -c "
+SELECT validation_errors, COUNT(*) as count 
+FROM dead_letter_events 
+GROUP BY validation_errors 
+ORDER BY count DESC;
+"
+```
+
+### Monitor Spark Logs
+
+```powershell
+# View recent Docker logs
+docker logs spark_master --tail 50
+
+# Follow Docker logs in real-time
+docker logs -f spark_master
+```
+
+### View Application Log Files
+
+All pipeline logs are saved to the `data/logs/` directory:
+
+```powershell
+# List all log files
+dir data\logs
+
+# View data generator log
+Get-Content data\logs\data_generator_20260129.log -Tail 30
+
+# View Spark streaming log
+Get-Content data\logs\spark_streaming_20260129.log -Tail 30
+
+# Watch logs in real-time
+Get-Content data\logs\data_generator_20260129.log -Tail 10 -Wait
+
+# Search for errors across all logs
+Select-String -Path "data\logs\*.log" -Pattern "ERROR"
+
+# Search for warnings
+Select-String -Path "data\logs\*.log" -Pattern "WARNING"
+
+# Find failed batches
+Select-String -Path "data\logs\*.log" -Pattern "FAILED"
+```
+
+**Log levels:**
+- INFO - Normal operation, batch completed successfully
+- WARNING - Potential issue (e.g., low data quality)
+- ERROR - Operation failed, requires attention
+
+### Interactive PostgreSQL Shell
+
+```powershell
+docker exec -it ecommerce_postgres psql -U spark -d ecommerce
+
+# Then run SQL queries:
+# \dt                    -- List tables
+# \dv                    -- List views
+# SELECT * FROM ...      -- Query data
+# \q                     -- Exit
+```
+
+---
+
+## Running Tests
+
+### Run All Tests
+
+```powershell
+# From project root
+cd ecommerce-streaming-pipeline
+
+# Run all unit tests (fast, no Spark required)
+python -m pytest tests/ -v --ignore=tests/test_schema_registry.py
+
+# Expected: 124 tests passed
+```
+
+### Run Specific Test Files
+
+```powershell
+# Data generator tests
+python -m pytest tests/test_data_generator.py -v
+
+# Transformation tests
+python -m pytest tests/test_transformations.py -v
+
+# Configuration tests
+python -m pytest tests/test_config.py -v
+
+# Retry logic tests
+python -m pytest tests/test_retry.py -v
+
+# Monitoring tests
+python -m pytest tests/test_monitoring.py -v
+```
+
+### Run with Coverage
+
+```powershell
+pip install pytest-cov
+python -m pytest tests/ -v --cov=. --cov-report=html
+
+# Open htmlcov/index.html for coverage report
+```
+
+---
 
 ## Troubleshooting
 
 ### PostgreSQL Connection Issues
-- Ensure Docker is running and containers are up.
-- If "role does not exist", restart PostgreSQL: `docker compose down postgres && docker compose up -d postgres`
 
-### Spark Not Processing
-- Check if data generator is running and creating files.
-- Verify checkpoint directory: `data/checkpoints/ecommerce` should exist.
-- Restart Spark: `docker compose restart spark`
+**Symptom**: "Connection refused" or "role does not exist"
 
-### Data Not Appearing in Database
-- Confirm JDBC URL in `spark/spark_streaming_to_postgres.py` matches container name.
-- Check Spark logs for JDBC errors.
-- Ensure PostgreSQL is accessible: `docker compose exec postgres psql -U spark -d ecommerce -c "SELECT 1;"`
+```powershell
+# Check if container is running
+docker compose ps
+
+# Restart PostgreSQL
+docker compose down postgres
+docker compose up -d postgres
+
+# Wait 10 seconds and retry
+Start-Sleep -Seconds 10
+```
+
+### Spark Not Processing Files
+
+**Symptom**: Events not appearing in database
+
+```powershell
+# Check Spark logs for errors
+docker logs spark_master --tail 100
+
+# Verify data files exist
+dir data/input
+
+# Restart Spark
+docker compose restart spark
+```
+
+### Data Generator Errors
+
+**Symptom**: Import errors or script crashes
+
+```powershell
+# Reinstall dependencies
+pip install --upgrade -r data_generator/requirements.txt
+
+# Verify Python version
+python --version  # Should be 3.10+
+```
 
 ### Port Conflicts
-- PostgreSQL uses port 5432. If in use, stop other services or change the port in `docker-compose.yml`.
+
+**Symptom**: "Port 5433 already in use"
+
+```powershell
+# Find process using port
+netstat -ano | findstr 5433
+
+# Stop conflicting service, or change port in docker-compose.yml
+```
+
+### Tests Failing
+
+```powershell
+# Run with verbose output
+python -m pytest tests/test_data_generator.py -v --tb=long
+
+# Check for missing dependencies
+pip install pytest pandas pyspark
+```
+
+---
 
 ## Stopping the Pipeline
 
-To stop all services:
+### Stop All Services
 
-```
+```powershell
+# Stop data generator: Press Ctrl+C in that terminal
+
+# Stop Docker services
 cd docker
 docker compose down
 ```
 
-- This stops and removes containers but preserves data volumes.
-- To remove volumes (reset database): `docker compose down -v`
+### Stop and Reset (Fresh Start)
+
+```powershell
+# Stop and remove all data
+docker compose down -v
+
+# Clear generated files
+Remove-Item -Recurse -Force ../data/input/*
+Remove-Item -Recurse -Force ../data/checkpoints/*
+```
+
+---
 
 ## Advanced Usage
 
-- **Custom Data**: Modify `data_generator/data_generator.py` to change event generation logic.
-- **Scaling**: Adjust Spark configuration in `docker-compose.yml` for more resources.
-- **Production**: Use Kubernetes or cloud services instead of Docker Compose.
+### Custom Event Generation
+
+Modify `data_generator/data_generator.py` to:
+- Add new event types
+- Change category distributions
+- Adjust anomaly rates
+
+### Schema Migrations
+
+Use the schema registry for evolving data:
+
+```python
+from spark.schema.registry import SchemaRegistry
+
+registry = SchemaRegistry()
+df_migrated = registry.auto_migrate(df)  # Upgrade to latest schema
+```
+
+
 
 ## Support
 
-If you encounter issues not covered here, check the logs and ensure all prerequisites are met. Refer to `docs/project_overview.md` for system details. 
+- **README**: See [README.md](../README.md) for Mermaid architecture diagrams
+- **Overview**: See [project_overview.md](project_overview.md) for component details
+- **Tests**: See [test_cases.md](test_cases.md) for test documentation
 
-Happy streaming!

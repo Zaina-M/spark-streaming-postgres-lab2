@@ -236,16 +236,37 @@ This document outlines a manual test plan for the ecommerce streaming pipeline. 
 
 ## Test Summary
 
-**Total Tests**: 10
+**Total Manual Tests**: 10
 
-**Passed**: 
+**Total Automated Tests**: 124+
 
-**Failed**: 
+| Test File | Tests | Description |
+|-----------|-------|-------------|
+| `test_data_generator.py` | 40 | Event generation, business logic |
+| `test_transformations.py` | 25 | Validation rules, enrichment |
+| `test_config.py` | 17 | Configuration management |
+| `test_retry.py` | 22 | Retry logic, circuit breaker |
+| `test_monitoring.py` | 20 | Metrics, alerting |
 
-**Notes**: 
+## Running Automated Tests
+
+```powershell
+# Navigate to project root
+cd ecommerce-streaming-pipeline
+
+# Run all unit tests
+python -m pytest tests/ -v --ignore=tests/test_schema_registry.py
+
+# Run specific test file
+python -m pytest tests/test_data_generator.py -v
+
+# Run with coverage report
+python -m pytest tests/ -v --cov=. --cov-report=html
+```
 
 ## Recommendations
 
-- Run tests in order.
-- Document any deviations from expected results.
-- For automated testing, consider adding unit tests for data generator and Spark transformations.
+- Run manual tests in order for environment setup
+- Run automated tests after any code changes
+- For CI/CD, automate the unit tests (124+ tests pass in ~4 seconds)
+- Schema registry tests require a Spark session and are excluded from fast runs
