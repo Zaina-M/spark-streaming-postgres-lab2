@@ -21,8 +21,6 @@ A real-time data pipeline for processing e-commerce events using Apache Spark St
 - [Configuration](#-configuration)
 - [Monitoring & Alerting](#-monitoring--alerting)
 - [Testing](#-testing)
-- [API Reference](#-api-reference)
-- [Troubleshooting](#-troubleshooting)
 - [Contributing](#-contributing)
 
 ---
