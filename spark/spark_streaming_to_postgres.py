@@ -4,11 +4,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import (
-    StructType, StructField,
-    StringType, IntegerType,
-    DoubleType, TimestampType
-)
 from pyspark.sql.functions import (
     col, to_timestamp, when, lit, current_timestamp, expr,
     abs as spark_abs, length, trim, lower, regexp_replace,
@@ -16,6 +11,9 @@ from pyspark.sql.functions import (
     year, month, dayofmonth, hour, dayofweek,
     count, sum as spark_sum, avg, min as spark_min, max as spark_max
 )
+
+# Import schema from registry instead of hardcoding
+from schema import get_registry
 
 
 # LOGGING CONFIGURATION
@@ -78,23 +76,10 @@ spark = (
 spark.sparkContext.setLogLevel("WARN")
 
 
-# Explicit schema (to avoid schema inference on streaming data)
-# Updated to include new enrichment columns
-
-schema = StructType([
-    StructField("event_id", StringType(), False),
-    StructField("user_id", IntegerType(), True),
-    StructField("session_id", StringType(), True),
-    StructField("event_type", StringType(), True),
-    StructField("product_id", IntegerType(), True),
-    StructField("category", StringType(), True),
-    StructField("price", DoubleType(), True),
-    StructField("quantity", IntegerType(), True),
-    StructField("user_segment", StringType(), True),
-    StructField("search_query", StringType(), True),
-    StructField("event_time", StringType(), True),
-    StructField("source_system", StringType(), True),
-])
+# Get schema from registry (v2 is current default)
+schema_registry = get_registry()
+schema = schema_registry.get_schema()  # Uses current version (v2)
+logger.info(f"Using schema version: {schema_registry.get_current_version()}")
 
 
 # Read streaming CSV files
