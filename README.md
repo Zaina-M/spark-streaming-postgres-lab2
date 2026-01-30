@@ -6,7 +6,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
 [![Tests](https://img.shields.io/badge/Tests-124%20Passing-brightgreen.svg)](#testing)
 
-A **production-ready** real-time data pipeline for processing e-commerce events using Apache Spark Structured Streaming and PostgreSQL. Features include schema versioning, fault tolerance with retry logic and circuit breakers, comprehensive monitoring and alerting, and 124+ unit tests.
+A real-time data pipeline for processing e-commerce events using Apache Spark Structured Streaming and PostgreSQL. Features include schema versioning, fault tolerance with retry logic and circuit breakers, comprehensive monitoring and alerting, and 124+ unit tests.
 
 ---
 
@@ -29,15 +29,15 @@ A **production-ready** real-time data pipeline for processing e-commerce events 
 
 ##  Overview
 
-This project simulates a **production-grade real-time data pipeline** for an e-commerce platform. It captures user actions (views, purchases, cart operations), processes them in real-time, validates data quality, and stores them for analytics.
+This project simulates a **real-time data pipeline** for an e-commerce platform. It captures user actions (views, purchases, cart operations), processes them in real-time, validates data quality, and stores them for analytics.
 
 ### What It Does
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         E-COMMERCE STREAMING PIPELINE                        │
+│                         E-COMMERCE STREAMING PIPELINE                       │
 │                                                                             │
-│   User Actions    →     CSV Files    →     Spark    →     PostgreSQL │
+│   User Actions    →     CSV Files    →     Spark    →            PostgreSQL │
 │  (simulated)             (staging)           (process)         (analytics)  │
 │                                                                             │
 │  • View product          • Batch files       • Validate        • Query data │

@@ -222,7 +222,6 @@ flowchart TD
     subgraph Alerts[" Alert Handlers"]
         CONSOLE[Console Logger]
         FILE[File Logger]
-        SLACK[Slack Webhook]
     end
     
     BATCH --> VALID

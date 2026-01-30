@@ -89,8 +89,8 @@ ecommerce-streaming-pipeline/
 │   └── test_monitoring.py
 └── docs/
     ├── project_overview.md
-    ├── user_guide.md               # This file
-    ├── detailed_explanation.md     # Beginner-friendly explanation
+    ├── user_guide.md               
+    ├── detailed_explanation.md     
     └── test_cases.md
 ```
 
@@ -108,7 +108,7 @@ POSTGRES_HOST=localhost
 POSTGRES_PORT=5433
 POSTGRES_DB=ecommerce
 POSTGRES_USER=spark
-POSTGRES_PASSWORD=spark123
+POSTGRES_PASSWORD=
 
 # Data Generator Settings
 BATCH_SIZE=100
@@ -134,7 +134,7 @@ LOG_LEVEL=INFO
 
 ### Default Configuration
 
-If no `.env` file exists, sensible defaults are used. See `config/settings.py` for all options.
+If no `.env` file exists, defaults are used. See `config/settings.py` for all options.
 
 ---
 
